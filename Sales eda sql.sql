@@ -145,13 +145,13 @@ limit 5;
 
 -- Complex but Flexibly Ranking Using Window Functions
 with ranked_products as (
-	select p.product_name,
+	select p.subcategory,
 		sum(s.sales_amount) as revenue,
 		rank() over (order by sum(s.sales_amount) desc) as rank_products
     from fact_sales s
     left join dim_products p
 		on s.product_key=p.product_key
-    group by p.product_name
+    group by p.subcategory
 )
 select *
 from ranked_products
@@ -176,12 +176,52 @@ order by revenue desc
 limit 10;
 
 -- The 3 customers with the fewest orders placed
-select c.first_name,count(s.customer_key) as no_of_orders
+select c.first_name,count(distinct order_number) as no_of_orders
 from fact_sales s
 left join dim_customers c
 	on s.customer_key=c.customer_key
 group by c.customer_key
 order by count(s.customer_key)
 limit 3;
+
+-- 07_change_over_time_analysis
+
+-- Analyse sales performance over time
+-- Quick Date Functions
+-- 1. Quick Date Functions - Grouping by Year and Month
+SELECT
+    YEAR(order_date) AS order_year,
+    MONTH(order_date) AS order_month,
+    SUM(sales_amount) AS total_sales,
+    COUNT(DISTINCT customer_key) AS total_customers,
+    SUM(quantity) AS total_quantity
+FROM fact_sales
+WHERE order_date IS NOT NULL
+GROUP BY YEAR(order_date), MONTH(order_date)
+ORDER BY YEAR(order_date), MONTH(order_date);
+
+
+-- 2.DATE_FORMAT() to group by month (first day of each month)
+SELECT
+    DATE_FORMAT(order_date, '%Y-%m-01') AS order_month,
+    SUM(sales_amount) AS total_sales,
+    COUNT(DISTINCT customer_key) AS total_customers,
+    SUM(quantity) AS total_quantity
+FROM fact_sales
+WHERE order_date IS NOT NULL
+GROUP BY order_month
+ORDER BY order_month;
+
+
+-- 3. Formatting date into 'YYYY-MMM' format (like '2024-Mar')
+SELECT
+    DATE_FORMAT(order_date, '%Y-%b') AS order_month,
+    SUM(sales_amount) AS total_sales,
+    COUNT(DISTINCT customer_key) AS total_customers,
+    SUM(quantity) AS total_quantity
+FROM fact_sales
+WHERE order_date IS NOT NULL
+GROUP BY order_month
+ORDER BY order_month;
 
 
