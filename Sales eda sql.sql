@@ -30,6 +30,7 @@ from dim_products
 order by category,subcategory,product_name;
 
 -- 03 Date_range_Exploration
+
 -- Determine the first and last order date and the total duration in months
 select min(order_date) as First_Order, max(order_date) as Last_Order, 
 timestampdiff(month,min(order_date),max(order_date)) as Duration_months
@@ -129,4 +130,58 @@ join dim_customers c
 on c.customer_key=s.customer_key
 group by c.country
 order by total_items_sold desc; 
+
+-- 06_ranking_analysis
+
+-- Which 5 products subcategory Generating the Highest Revenue?
+-- Simple Ranking
+select p.subcategory,sum(s.sales_amount) as revenue
+from fact_sales s
+left join dim_products p
+on s.product_key=p.product_key
+group by p.subcategory
+order by revenue desc
+limit 5; 
+
+-- Complex but Flexibly Ranking Using Window Functions
+with ranked_products as (
+	select p.product_name,
+		sum(s.sales_amount) as revenue,
+		rank() over (order by sum(s.sales_amount) desc) as rank_products
+    from fact_sales s
+    left join dim_products p
+		on s.product_key=p.product_key
+    group by p.product_name
+)
+select *
+from ranked_products
+where rank_products<=5;
+
+-- What are the 5 worst-performing products in terms of sales?
+select p.product_name,sum(s.sales_amount) as revenue
+from fact_sales s
+left join dim_products p
+on s.product_key=p.product_key
+group by p.product_key
+order by revenue
+limit 5;
+
+-- Find the top 10 customers who have generated the highest revenue
+select c.first_name,sum(s.sales_amount) as revenue
+from fact_sales s
+left join dim_customers c
+on c.customer_key=s.customer_key
+group by c.customer_key
+order by revenue desc
+limit 10;
+
+-- The 3 customers with the fewest orders placed
+select c.first_name,count(s.customer_key) as no_of_orders
+from fact_sales s
+left join dim_customers c
+	on s.customer_key=c.customer_key
+group by c.customer_key
+order by count(s.customer_key)
+limit 3;
+
 
